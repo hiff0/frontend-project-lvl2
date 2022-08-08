@@ -1,35 +1,58 @@
-import { read, readFile, readFileSync } from 'fs';
+import { readFileSync } from 'fs';
 import path from 'path';
 import { cwd } from 'node:process';
-import _ from 'lodash';
 
 export default (filepath1, filepath2) => {
+    const resultDiffObj = {};
     //сохраняем полный путь к файлам
-    console.log(filepath1);
-    console.log(filepath2);
-    const currentPath = cwd();
-    const file1Path = path.resolve(`${currentPath}`, `${filepath1}`);
-    const file2Path = path.resolve(`${currentPath}`, `${filepath2}`);
-    console.log(file1Path);
-    console.log(file2Path);
+    const file1Path = path.resolve(`${cwd()}`, `${filepath1}`);
+    const file2Path = path.resolve(`${cwd()}`, `${filepath2}`);
+
     //сохраняем содержимое файлов
-    //const file1 = readFileSync(file1Path, 'utf-8');
-    //const file2 = readFileSync(file2Path, 'utf-8');
-    //console.log(file1);
-    //console.log(file2);
+    const objFile1 = JSON.parse(readFileSync(file1Path, 'utf-8'));
+    const objFile2 = JSON.parse(readFileSync(file2Path, 'utf-8'));
 
-    /*
-    const file1 = JSON.parse(readFileSync(path.resolve(filepath1), 'utf-8'));
-    const file2 = JSON.parse(readFileSync(path.resolve(filepath2), 'utf-8'));
+    const entriesFile1 = Object.entries(objFile1);
+    const entriesFile2 = Object.entries(objFile2);
 
-    const entries1 = Object.entries(file1);
-    const entries2 = Object.entries(file2);
-    const concatEntries = entries1.concat(entries2)
-        .map(JSON.stringify)
-        .filter((item, index, arr) => arr.indexOf(item, index + 1) === -1)
-        .sort()
-        .map(JSON.parse)
+    const firstAndSecondHas = []; //есть в обоих файла и нет различий
+    const firstHasSecondNo = []; //есть в первом, но нет во втором (-)
+    const firstNoSecondHas = []; //нет в первом, но есть во втором (+)
 
-    return concatEntries;
-    */
+    //записываем разницу между объектами
+    for (const [key, value] of entriesFile1) {
+        if (objFile2.hasOwnProperty(key) && value === objFile2[key]) {
+            firstAndSecondHas.push([key, value]);
+        } else if (!objFile2.hasOwnProperty(key) || (objFile2.hasOwnProperty(key) && value !== objFile2[key])) {
+            firstHasSecondNo.push([key, value]);
+        }
+    }
+    for (const [key, value] of entriesFile2) {
+        if (!objFile1.hasOwnProperty(key) || (objFile1.hasOwnProperty(key) && value !== objFile1[key])) {
+            firstNoSecondHas.push([key, value]);
+        }
+    }
+
+    //записываем результат в объект
+    for (const [key, value] of firstAndSecondHas) {
+        resultDiffObj[`  ${key}`] = value;
+    }
+    for (const [key, value] of firstHasSecondNo) {
+        resultDiffObj[`- ${key}`] = value;
+    }
+    for (const [key, value] of firstNoSecondHas) {
+        resultDiffObj[`+ ${key}`] = value;
+    }
+
+    return JSON.stringify(Object.entries(resultDiffObj).sort((value1, value2) => {
+        const value1Split = value1[0].split(' ');
+        const value2Split = value2[0].split(' ');
+        if (value1Split[value1Split.length - 1] < value2Split[value2Split.length - 1]) {
+            return -1;
+        }
+    })
+        .reduce((acc, [key, value]) => {
+            acc[key] = value;
+            return acc;
+        }, {}));
 };
