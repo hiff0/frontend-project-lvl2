@@ -1,0 +1,19 @@
+name: Linter
+on: 
+  push: 
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs: 
+  build: 
+    runs-on: ubuntu-lates
+
+    steps:
+    - user: action/checkout@v2
+    - name: Linter
+      user: actions/setup-node@v1
+      with: 
+        node-version: 16.x
+    - run: npm install
+    - run: make lint
