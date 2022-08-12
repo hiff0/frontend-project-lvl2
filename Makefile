@@ -2,4 +2,4 @@ lint:
 	npx eslint ..
 
 test:
-	npx jest .
+	npm tests
